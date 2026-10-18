@@ -23,6 +23,15 @@ namespace TwoWorlds.Logic
             _ => this
         };
 
+        public Pos MirrorStep(Direction dir) => dir switch
+        {
+            Direction.Up => new Pos(X, Y - 1),
+            Direction.Down => new Pos(X, Y + 1),
+            Direction.Left => new Pos(X + 1, Y),
+            Direction.Right => new Pos(X - 1, Y),
+            _ => this
+        };
+
         public bool Equals(Pos other) => X == other.X && Y == other.Y;
         public override bool Equals(object obj) => obj is Pos other && Equals(other);
         public override int GetHashCode() => X * 397 ^ Y;

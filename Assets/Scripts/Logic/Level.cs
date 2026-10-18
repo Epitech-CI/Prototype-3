@@ -17,14 +17,19 @@ namespace TwoWorlds.Logic
         public int Width { get; }
         public int Height { get; }
         public Pos Start { get; }
+
+        //Check if mirror level
+        public bool IsMirror { get; }
+
         private readonly Tile[,] tiles;
 
-        public World(Tile[,] tiles, Pos start)
+        public World(Tile[,] tiles, Pos start, bool isMirror = false)
         {
             this.tiles = tiles;
             Width = tiles.GetLength(0);
             Height = tiles.GetLength(1);
             Start = start;
+            IsMirror = isMirror;
         }
 
         public bool InBounds(Pos p) => p.X >= 0 && p.Y >= 0 && p.X < Width && p.Y < Height;

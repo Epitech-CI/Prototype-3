@@ -65,7 +65,9 @@ namespace TwoWorlds.Logic
                     result.Players[i] = new PlayerMove { Outcome = MoveOutcome.Frozen, From = from, To = from };
                     continue;
                 }
-                var to = from.Step(dir);
+                //Also checks if mirror movement
+                var world = Level.Worlds[i];
+                var to = world.IsMirror ? from.MirrorStep(dir): from.Step(dir);
                 bool canEnter = CanEnter(Level.Worlds[i], to);
                 result.Players[i] = new PlayerMove { Outcome = canEnter ? MoveOutcome.Moved : MoveOutcome.Blocked, From = from, To = to };
             }

@@ -24,6 +24,7 @@ namespace TwoWorlds.View
         [SerializeField] private Color goal = new Color32(0x4C, 0xC2, 0x5A, 0xFF);
         [SerializeField] private Color playerA = new Color32(0x6F, 0xE3, 0xFF, 0xFF);
         [SerializeField] private Color playerB = new Color32(0xFF, 0xD1, 0x66, 0xFF);
+        [SerializeField] private Color mirrorPlayer = new Color32(0xB0, 0x72, 0x66, 0xFF);
         [SerializeField] private Color[] letterColors =
         {
             new Color32(0xFF, 0x8C, 0x42, 0xFF), // A
@@ -53,7 +54,11 @@ namespace TwoWorlds.View
                 var parent = new GameObject(i == 0 ? "World A" : "World B").transform;
                 parent.SetParent(transform, false);
                 BuildWorld(level.Worlds[i], origins[i], parent);
-                players[i] = Spawn(parent, CellToWorld(i, level.Worlds[i].Start), i == 0 ? playerA : playerB, 0.7f, 10, "Player");
+
+                World world = level.Worlds[i];
+                Color playerColor = world.IsMirror ? mirrorPlayer : (i == 0 ? playerA : playerB);
+                string playerName = world.IsMirror ? "Mirror Player" : "Player";
+                players[i] = Spawn(parent, CellToWorld(i, world.Start),playerColor, 0.7f, 10, playerName);
             }
 
             bounds = new Rect(-0.5f, -0.5f, width, a.Height + worldGap + b.Height);

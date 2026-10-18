@@ -5,7 +5,7 @@ namespace TwoWorlds.Logic
 {
     /// <summary>
     /// Parses a level file: world A, a blank line, world B. First line = top row.
-    /// . floor  # wall  X spikes  S start  G goal  a-z button  A-Z door (except S, G, X)
+    /// . floor  # wall  X spikes  S start  G goal M mirrorPlayer a-z button  A-Z door (except S, G, X, M)
     /// </summary>
     public static class LevelParser
     {
@@ -39,6 +39,9 @@ namespace TwoWorlds.Logic
             Pos? start = null;
             bool hasGoal = false;
 
+            //Mirror level logic
+            bool isMirror = false;
+
             for (int row = 0; row < height; row++)
             {
                 if (rows[row].Length != width)
@@ -49,25 +52,26 @@ namespace TwoWorlds.Logic
                 {
                     char c = rows[row][x];
                     tiles[x, y] = ParseTile(c, name);
-                    if (c == 'S')
+                    if (c == 'S' || c == 'M')
                     {
-                        if (start != null) throw new FormatException($"World {name}: more than one start 'S'.");
+                        if (start != null) throw new FormatException($"World {name}: more than one start 'S' or 'M'.");
                         start = new Pos(x, y);
+                        isMirror = c == 'M';
                     }
                     if (c == 'G') hasGoal = true;
                 }
             }
 
-            if (start == null) throw new FormatException($"World {name}: no start 'S'.");
+            if (start == null) throw new FormatException($"World {name}: no start 'S' or 'M'.");
             if (!hasGoal) throw new FormatException($"World {name}: no goal 'G'.");
-            return new World(tiles, start.Value);
+            return new World(tiles, start.Value, isMirror);
         }
 
         private static Tile ParseTile(char c, string worldName)
         {
             switch (c)
             {
-                case '.': case 'S': return new Tile(TileKind.Floor);
+                case '.': case 'S': case 'M':  return new Tile(TileKind.Floor);
                 case '#': return new Tile(TileKind.Wall);
                 case 'X': return new Tile(TileKind.Spikes);
                 case 'G': return new Tile(TileKind.Goal);

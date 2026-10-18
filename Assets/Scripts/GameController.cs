@@ -20,7 +20,10 @@ namespace TwoWorlds
 
         private bool IsLastLevel => levelIndex == levels.Length - 1;
 
-        private void Awake() => view = GetComponent<GridView>();
+        private void Awake()
+        {
+            view = GetComponent<GridView>();
+        } 
 
         private void Start() => LoadLevel(0);
 
@@ -64,10 +67,26 @@ namespace TwoWorlds
         private static bool TryReadDirection(Keyboard kb, out Direction dir)
         {
             dir = default;
-            if (kb.upArrowKey.wasPressedThisFrame || kb.wKey.wasPressedThisFrame) dir = Direction.Up;
-            else if (kb.downArrowKey.wasPressedThisFrame || kb.sKey.wasPressedThisFrame) dir = Direction.Down;
-            else if (kb.leftArrowKey.wasPressedThisFrame || kb.aKey.wasPressedThisFrame) dir = Direction.Left;
-            else if (kb.rightArrowKey.wasPressedThisFrame || kb.dKey.wasPressedThisFrame) dir = Direction.Right;
+            if (kb.upArrowKey.wasPressedThisFrame || kb.wKey.wasPressedThisFrame)
+            {
+                dir = Direction.Up;
+                SoundManager.Instance.PlaySound("StepVert");
+            }
+            else if (kb.downArrowKey.wasPressedThisFrame || kb.sKey.wasPressedThisFrame)
+            {
+                dir = Direction.Down;
+                SoundManager.Instance.PlaySound("StepVert");
+            }
+            else if (kb.leftArrowKey.wasPressedThisFrame || kb.aKey.wasPressedThisFrame)
+            {
+                dir = Direction.Left;
+                SoundManager.Instance.PlaySound("StepHor");
+            }
+            else if (kb.rightArrowKey.wasPressedThisFrame || kb.dKey.wasPressedThisFrame)
+            {
+                dir = Direction.Right;
+                SoundManager.Instance.PlaySound("StepHor");
+            }
             else return false;
             return true;
         }
