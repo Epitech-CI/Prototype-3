@@ -5,7 +5,8 @@ namespace TwoWorlds.Logic
 {
     /// <summary>
     /// Parses a level file: world A, a blank line, world B. First line = top row.
-    /// . floor  # wall  X spikes  S start  G goal M mirrorPlayer a-z button  A-Z door (except S, G, X, M)
+    /// . floor  # wall  X spikes  S start  G goal M mirrorPlayer a-z button (except v)  A-Z door (except S, G, X, M)
+    /// > &lt; ^ v turret firing in that direction  ! trigger (fires every turret of both worlds)
     /// </summary>
     public static class LevelParser
     {
@@ -75,6 +76,12 @@ namespace TwoWorlds.Logic
                 case '#': return new Tile(TileKind.Wall);
                 case 'X': return new Tile(TileKind.Spikes);
                 case 'G': return new Tile(TileKind.Goal);
+                // Checked before the a-z range below: 'v' is a turret, not a button.
+                case '>': return new Tile(TileKind.Turret, turretDirection: Direction.Right);
+                case '<': return new Tile(TileKind.Turret, turretDirection: Direction.Left);
+                case '^': return new Tile(TileKind.Turret, turretDirection: Direction.Up);
+                case 'v': return new Tile(TileKind.Turret, turretDirection: Direction.Down);
+                case '!': return new Tile(TileKind.Trigger);
             }
             if (c >= 'a' && c <= 'z') return new Tile(TileKind.Button, char.ToUpperInvariant(c));
             if (c >= 'A' && c <= 'Z') return new Tile(TileKind.Door, c);

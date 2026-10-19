@@ -13,10 +13,18 @@ namespace TwoWorlds
     {
         [SerializeField] private TextAsset[] levels;
 
+        [Tooltip("Seconds between two projectile moves.")]
+        [SerializeField] private float tickInterval = 0.4f;
+
+        [Tooltip("Seconds a death stays on screen before the level resets.")]
+        [SerializeField] private float deathPause = 0.5f;
+
         private GridView view;
         private GameLogic game;
         private int levelIndex;
         private GUIStyle textStyle;
+        private float tickTimer;
+        private float deathTimer;
 
         private bool IsLastLevel => levelIndex == levels.Length - 1;
 
@@ -40,12 +48,22 @@ namespace TwoWorlds
         {
             levelIndex = index;
             game = new GameLogic(LevelParser.Parse(levels[index].text));
-            view.Build(game.Level);
-            view.Refresh(game);
+            view.Build(game.Level, tickInterval);
+            view.Refresh(game, snap: true);
+            tickTimer = 0f;
+            deathTimer = 0f;
         }
 
         private void Update()
         {
+            // During the death pause nothing moves; the reset is shown when it ends.
+            if (deathTimer > 0f)
+            {
+                deathTimer -= Time.deltaTime;
+                if (deathTimer <= 0f) view.Refresh(game, snap: true);
+                return;
+            }
+
             var kb = Keyboard.current;
             if (kb == null) return;
 
@@ -59,7 +77,7 @@ namespace TwoWorlds
             if (kb.rKey.wasPressedThisFrame)
             {
                 game.Restart();
-                view.Refresh(game);
+                view.Refresh(game, snap: true);
             }
             else if (kb.backspaceKey.wasPressedThisFrame)
             {
@@ -67,9 +85,50 @@ namespace TwoWorlds
             }
             else if (TryReadDirection(kb, out var dir))
             {
-                game.Step(dir);
+                var result = game.Step(dir);
+                if (result.Died)
+                {
+                    for (int i = 0; i < Level.PlayerCount; i++)
+                        if (result.Players[i].Outcome == MoveOutcome.Died) view.ShowDeath(i, result.Players[i].To);
+                    StartDeathPause();
+                    return;
+                }
                 view.Refresh(game);
             }
+
+            UpdateClock();
+        }
+
+        // Projectiles move on their own, one cell every tickInterval seconds.
+        private void UpdateClock()
+        {
+            // With no projectile on screen the clock waits, so a new shot always gets a full interval before moving.
+            if (game.State.Projectiles.Count == 0)
+            {
+                tickTimer = 0f;
+                return;
+            }
+
+            tickTimer += Time.deltaTime;
+            if (tickTimer < tickInterval) return;
+            tickTimer -= tickInterval;
+
+            var result = game.Tick();
+            if (result.Died)
+            {
+                for (int i = 0; i < Level.PlayerCount; i++)
+                    if (result.Hits[i] is Pos cell) view.ShowDeath(i, cell);
+                StartDeathPause();
+                return;
+            }
+            view.Refresh(game);
+        }
+
+        private void StartDeathPause()
+        {
+            deathTimer = deathPause;
+            tickTimer = 0f;
+            if (SoundManager.Instance != null) SoundManager.Instance.PlaySound("Death");
         }
 
         // Letter keys are physical positions: wKey is Z on an AZERTY keyboard, aKey is Q, so ZQSD works too.
@@ -109,8 +168,9 @@ namespace TwoWorlds
             textStyle.alignment = TextAnchor.UpperLeft;
 
             GUI.Label(new Rect(16, 8, Screen.width, size * 2), $"Level {levelIndex + 1} / {levels.Length}", textStyle);
+            string undo = game.Level.HasTurrets ? "" : "     Undo: Backspace";
             GUI.Label(new Rect(16, Screen.height - size * 2, Screen.width, size * 2),
-                "Move: Arrows / WASD / ZQSD     Undo: Backspace     Restart: R", textStyle);
+                $"Move: Arrows / WASD / ZQSD{undo}     Restart: R", textStyle);
 
             if (!game.IsWon) return;
             var box = new Rect(Screen.width * 0.25f, Screen.height * 0.35f, Screen.width * 0.5f, Screen.height * 0.3f);
