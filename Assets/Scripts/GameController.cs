@@ -23,9 +23,18 @@ namespace TwoWorlds
         private void Awake()
         {
             view = GetComponent<GridView>();
-        } 
+        }
 
-        private void Start() => LoadLevel(0);
+        private void Start()
+        {
+            int selectedLevel = Mathf.Clamp(
+                LevelSelect.SelectedLevel,
+                0,
+                levels.Length - 1
+            );
+
+            LoadLevel(selectedLevel);
+        }
 
         private void LoadLevel(int index)
         {
