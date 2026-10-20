@@ -11,7 +11,8 @@ namespace TwoWorlds.Logic
         Button,
         Door,
         Turret,
-        Trigger
+        Trigger,
+        Ice
     };
 
     public readonly struct Tile

@@ -28,6 +28,7 @@ namespace TwoWorlds.View
         [SerializeField] private Color trigger = new Color32(0x5, 0x48, 0x2A, 0xFF);
         [SerializeField] private Color projectile = new Color32(0xFF, 0xF1, 0xA8, 0xFF);
         [SerializeField] private Color death = new Color32(0xFF, 0x20, 0x20, 0xFF);
+        [SerializeField] private Color ice = new Color32(0xA8, 0xDC, 0xEA, 0xFF);
 
         [Header("Motion")]
         [Tooltip("Cells per second when a character slides to its new cell.")]
@@ -167,7 +168,10 @@ namespace TwoWorlds.View
             {
                 var tile = world[new Pos(x, y)];
                 var pos = origin + new Vector2(x, y);
-                Spawn(parent, pos, tile.Kind == TileKind.Wall ? wall : floor, CellSize, 0, $"Cell {x},{y}");
+                Spawn(parent, pos, 
+                    tile.Kind == TileKind.Wall ? wall : 
+                    tile.Kind == TileKind.Ice ? ice: floor, 
+                    CellSize, 0, $"Cell {x},{y}");
 
                 switch (tile.Kind)
                 {
@@ -195,6 +199,10 @@ namespace TwoWorlds.View
                     case TileKind.Trigger:
                         Spawn(parent, pos, trigger, 0.5f, 1, "Trigger").transform.rotation = Quaternion.Euler(0, 0, 45);
                         break;
+                    // Adds a shine on the ice tile so it looks glossy or slippery
+                    case TileKind.Ice:
+                            Spawn(parent, pos, new Color(1f, 1f, 1f, 0.18f), 0.45f, 1, "Ice Shine");
+                            break;
                 }
             }
         }

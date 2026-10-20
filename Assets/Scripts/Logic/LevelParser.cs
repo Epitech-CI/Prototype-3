@@ -82,6 +82,7 @@ namespace TwoWorlds.Logic
                 case '^': return new Tile(TileKind.Turret, turretDirection: Direction.Up);
                 case 'v': return new Tile(TileKind.Turret, turretDirection: Direction.Down);
                 case '!': return new Tile(TileKind.Trigger);
+                case '~': return new Tile(TileKind.Ice);
             }
             if (c >= 'a' && c <= 'z') return new Tile(TileKind.Button, char.ToUpperInvariant(c));
             if (c >= 'A' && c <= 'Z') return new Tile(TileKind.Door, c);
