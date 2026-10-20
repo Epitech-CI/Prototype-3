@@ -121,12 +121,18 @@ namespace TwoWorlds.Logic
                             ? to.MirrorStep(dir)
                             : to.Step(dir);
 
-                        // Stop when the next tile is blocked or isn't ice.
+
+                        // Stop if the next tile is blocked or isn't ice or spikes
                         if (!CanEnter(world, next) ||
-                            world[next].Kind != TileKind.Ice)
+                            (world[next].Kind != TileKind.Ice &&
+                             world[next].Kind != TileKind.Spikes))
                             break;
 
                         to = next;
+
+                        // Allow player to slide into spikes
+                        if (world[to].Kind == TileKind.Spikes)
+                            break;
                     }
                 }
 
