@@ -2,6 +2,7 @@ using TwoWorlds.Logic;
 using TwoWorlds.View;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 
 namespace TwoWorlds
 {
@@ -67,10 +68,16 @@ namespace TwoWorlds
             var kb = Keyboard.current;
             if (kb == null) return;
 
+            // Last level can load the main menu instead of simply ending the game
             if (game.IsWon)
             {
                 bool next = kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame || kb.spaceKey.wasPressedThisFrame;
-                if (next && !IsLastLevel) LoadLevel(levelIndex + 1);
+
+                if (next && !IsLastLevel)
+                    LoadLevel(levelIndex + 1);
+                else if (next && IsLastLevel)
+                    SceneManager.LoadScene("Menu");
+
                 return;
             }
 
@@ -178,7 +185,7 @@ namespace TwoWorlds
             GUI.Box(box, GUIContent.none); // drawn twice for a darker background
             textStyle.alignment = TextAnchor.MiddleCenter;
             GUI.Label(box, IsLastLevel
-                ? "All levels complete!\nThanks for playing."
+                ? "All levels complete!\nThanks for playing.\nPress Enter to return to menu."
                 : "Level complete!\nPress Enter to continue.", textStyle);
         }
     }
