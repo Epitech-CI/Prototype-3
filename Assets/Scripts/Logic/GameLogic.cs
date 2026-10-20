@@ -105,6 +105,31 @@ namespace TwoWorlds.Logic
                 var world = Level.Worlds[i];
                 var to = world.IsMirror ? from.MirrorStep(dir) : from.Step(dir);
                 bool canEnter = CanEnter(Level.Worlds[i], to);
+
+                // If the player is on ice and moves toward another ice tile, keep sliding until it reaches the last consecutive ice tile.
+                if (canEnter &&
+                    world[from].Kind == TileKind.Ice &&
+                    world[to].Kind == TileKind.Ice)
+                {
+                    while (true)
+                    {
+                        // Stop if there is a projectile on this tile.
+                        if (HasProjectileAt(i, to))
+                            break;
+
+                        var next = world.IsMirror
+                            ? to.MirrorStep(dir)
+                            : to.Step(dir);
+
+                        // Stop when the next tile is blocked or isn't ice.
+                        if (!CanEnter(world, next) ||
+                            world[next].Kind != TileKind.Ice)
+                            break;
+
+                        to = next;
+                    }
+                }
+
                 result.Players[i] = new PlayerMove
                     { Outcome = canEnter ? MoveOutcome.Moved : MoveOutcome.Blocked, From = from, To = to };
             }
