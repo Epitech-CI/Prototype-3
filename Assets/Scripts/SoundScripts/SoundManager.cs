@@ -4,6 +4,7 @@ using UnityEngine;
 public class SoundManager : MonoBehaviour
 {
     public static SoundManager Instance;
+    public bool IsSFXMuted => sfxSource.mute;
 
     [SerializeField]
     private SoundLibrary sfxLibrary;
@@ -20,11 +21,19 @@ public class SoundManager : MonoBehaviour
         {
             Instance = this;
             DontDestroyOnLoad(gameObject);
+
+            bool sfxEnabled = PlayerPrefs.GetInt("SFXEnabled", 1) == 1;
+            SetSFXEnabled(sfxEnabled);
         }
     }
     
     public void PlaySound(string soundName)
     {
         sfxSource.PlayOneShot(sfxLibrary.GetClipFromName(soundName));
+    }
+
+    public void SetSFXEnabled(bool enabled)
+    {
+        sfxSource.mute = !enabled;
     }
 }
