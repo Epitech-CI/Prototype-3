@@ -75,6 +75,20 @@ namespace TwoWorlds.Tests
         }
 
         [Test]
+        public void Deaths_CountedOnDeath_ButNotOnManualRestart()
+        {
+            var game = Load("Level1.txt");
+            Assert.AreEqual(0, game.Deaths);
+
+            Play(game, "UUURR");
+            game.Step(Direction.Up); // A steps on spikes
+            Assert.AreEqual(1, game.Deaths);
+
+            game.Restart();
+            Assert.AreEqual(1, game.Deaths, "A manual restart is not a death");
+        }
+
+        [Test]
         public void Undo_RestoresPreviousState()
         {
             var game = Load("Level1.txt");
@@ -222,6 +236,7 @@ namespace TwoWorlds.Tests
             Assert.IsTrue(result.Died);
             Assert.AreEqual(new Pos(1, 0), result.Hits[0]);
             Assert.IsNull(result.Hits[1]);
+            Assert.AreEqual(1, game.Deaths);
             AssertResetToStart(game);
         }
 

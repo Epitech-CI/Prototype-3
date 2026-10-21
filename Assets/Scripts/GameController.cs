@@ -27,22 +27,30 @@ namespace TwoWorlds
         private float tickTimer;
         private float deathTimer;
 
-        private bool IsLastLevel => levelIndex == levels.Length - 1;
+        // Levels after the first empty file are placeholders and are not played.
+        private int playableCount;
+
+        private bool IsLastLevel => levelIndex == playableCount - 1;
 
         private void Awake()
         {
             view = GetComponent<GridView>();
+            while (playableCount < levels.Length && levels[playableCount] != null &&
+                   !string.IsNullOrWhiteSpace(levels[playableCount].text))
+                playableCount++;
         }
 
         private void Start()
         {
-            int selectedLevel = Mathf.Clamp(
-                LevelSelect.SelectedLevel,
-                0,
-                levels.Length - 1
-            );
+            // A menu button for a level that is not made yet sends the player back to the menu.
+            if (LevelSelect.SelectedLevel >= playableCount)
+            {
+                Debug.LogWarning($"Level {LevelSelect.SelectedLevel + 1} is empty, returning to menu.");
+                SceneManager.LoadScene("Menu");
+                return;
+            }
 
-            LoadLevel(selectedLevel);
+            LoadLevel(Mathf.Max(LevelSelect.SelectedLevel, 0));
         }
 
         private void LoadLevel(int index)
@@ -57,6 +65,8 @@ namespace TwoWorlds
 
         private void Update()
         {
+            if (game == null) return; // returning to the menu
+
             // During the death pause nothing moves; the reset is shown when it ends.
             if (deathTimer > 0f)
             {
@@ -174,7 +184,10 @@ namespace TwoWorlds
             textStyle.fontSize = size;
             textStyle.alignment = TextAnchor.UpperLeft;
 
-            GUI.Label(new Rect(16, 8, Screen.width, size * 2), $"Level {levelIndex + 1} / {levels.Length}", textStyle);
+            GUI.Label(new Rect(16, 8, Screen.width, size * 2), $"Level {levelIndex + 1} / {playableCount}", textStyle);
+            textStyle.alignment = TextAnchor.UpperRight;
+            GUI.Label(new Rect(0, 8, Screen.width - 16, size * 2), $"Deaths: {game.Deaths}", textStyle);
+            textStyle.alignment = TextAnchor.UpperLeft;
             string undo = game.Level.HasTurrets ? "" : "     Undo: Backspace";
             GUI.Label(new Rect(16, Screen.height - size * 2, Screen.width, size * 2),
                 $"Move: Arrows / WASD / ZQSD{undo}     Restart: R", textStyle);
@@ -184,9 +197,10 @@ namespace TwoWorlds
             GUI.Box(box, GUIContent.none);
             GUI.Box(box, GUIContent.none); // drawn twice for a darker background
             textStyle.alignment = TextAnchor.MiddleCenter;
+            string deaths = game.Deaths == 1 ? "1 death" : $"{game.Deaths} deaths";
             GUI.Label(box, IsLastLevel
-                ? "All levels complete!\nThanks for playing.\nPress Enter to return to menu."
-                : "Level complete!\nPress Enter to continue.", textStyle);
+                ? $"All levels complete! ({deaths})\nThanks for playing.\nPress Enter to return to menu."
+                : $"Level complete! ({deaths})\nPress Enter to continue.", textStyle);
         }
     }
 }
