@@ -60,6 +60,9 @@ namespace TwoWorlds.Logic
         public Level Level { get; }
         public GameState State { get; private set; }
 
+        /// <summary>Deaths since the level was loaded. A manual restart does not count.</summary>
+        public int Deaths { get; private set; }
+
         private readonly Stack<GameState> history = new Stack<GameState>();
 
         // Never reset, so a projectile fired after a restart never reuses the id of an old sprite.
@@ -158,6 +161,7 @@ namespace TwoWorlds.Logic
 
             if (result.Died)
             {
+                Deaths++;
                 Restart();
                 return result;
             }
@@ -214,7 +218,11 @@ namespace TwoWorlds.Logic
                 result.Died = true;
             }
 
-            if (result.Died) Restart();
+            if (result.Died)
+            {
+                Deaths++;
+                Restart();
+            }
             return result;
         }
 
