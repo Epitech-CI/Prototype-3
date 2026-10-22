@@ -114,7 +114,12 @@ namespace TwoWorlds
                 if (result.Died)
                 {
                     for (int i = 0; i < Level.PlayerCount; i++)
-                        if (result.Players[i].Outcome == MoveOutcome.Died) view.ShowDeath(i, result.Players[i].To);
+                    {
+                        var move = result.Players[i];
+                        if (move.Outcome != MoveOutcome.Died) continue;
+                        bool farAway = move.TeleportedFrom != null && move.To != move.TeleportedFrom;
+                        view.ShowDeath(i, move.To, snap: farAway);
+                    }
                     StartDeathPause();
                     return;
                 }

@@ -21,8 +21,11 @@ namespace TwoWorlds.Logic
         public MoveOutcome Outcome;
         public Pos From;
 
-        /// <summary>Cell the character tried to enter (equals From when Frozen).</summary>
+        /// <summary>Cell the character tried to enter (equals From when Frozen), or the exit of the teleporter it entered.</summary>
         public Pos To;
+
+        /// <summary>Teleporter the character stepped on before being moved to To, null if it did not teleport.</summary>
+        public Pos? TeleportedFrom;
     }
 
     public sealed class StepResult
@@ -139,8 +142,20 @@ namespace TwoWorlds.Logic
                     }
                 }
 
+                // Stepping on a teleporter moves the character to the other teleporter with the same digit.
+                // Arriving on the exit does not teleport again: only entering a teleporter does.
+                Pos? teleportedFrom = null;
+                if (canEnter && world[to].Kind == TileKind.Teleporter && world.TryGetTeleporterExit(to, out var exit))
+                {
+                    teleportedFrom = to;
+                    to = exit;
+                }
+
                 result.Players[i] = new PlayerMove
-                    { Outcome = canEnter ? MoveOutcome.Moved : MoveOutcome.Blocked, From = from, To = to };
+                {
+                    Outcome = canEnter ? MoveOutcome.Moved : MoveOutcome.Blocked, From = from, To = to,
+                    TeleportedFrom = teleportedFrom
+                };
             }
 
             // 2. Deaths: landing on spikes or walking into a projectile resets the whole level.
@@ -152,6 +167,12 @@ namespace TwoWorlds.Logic
                 DeathCause? cause = null;
                 if (Level.Worlds[i][move.To].Kind == TileKind.Spikes) cause = DeathCause.Spikes;
                 else if (HasProjectileAt(i, move.To)) cause = DeathCause.Projectile;
+                // A projectile on the entry teleporter also kills: the character walked into it.
+                else if (move.TeleportedFrom is Pos entry && HasProjectileAt(i, entry))
+                {
+                    cause = DeathCause.Projectile;
+                    result.Players[i].To = entry;
+                }
                 if (cause == null) continue;
 
                 result.Players[i].Outcome = MoveOutcome.Died;

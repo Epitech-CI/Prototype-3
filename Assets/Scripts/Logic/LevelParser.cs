@@ -6,7 +6,8 @@ namespace TwoWorlds.Logic
     /// <summary>
     /// Parses a level file: world A, a blank line, world B. First line = top row.
     /// . floor  # wall  X spikes  S start  G goal M mirrorPlayer a-z button (except v)  A-Z door (except S, G, X, M)
-    /// > &lt; ^ v turret firing in that direction  ! trigger (fires every turret of both worlds)
+    /// > &lt; ^ v turret firing in that direction  ! trigger (fires every turret of both worlds)  ~ ice
+    /// 1-9 teleporter (each digit appears exactly twice in a world; entering one moves you to the other)
     /// </summary>
     public static class LevelParser
     {
@@ -65,7 +66,14 @@ namespace TwoWorlds.Logic
 
             if (start == null) throw new FormatException($"World {name}: no start 'S' or 'M'.");
             if (!hasGoal) throw new FormatException($"World {name}: no goal 'G'.");
-            return new World(tiles, start.Value, isMirror);
+            try
+            {
+                return new World(tiles, start.Value, isMirror);
+            }
+            catch (FormatException e)
+            {
+                throw new FormatException($"World {name}: {e.Message}", e);
+            }
         }
 
         private static Tile ParseTile(char c, string worldName)
@@ -84,6 +92,7 @@ namespace TwoWorlds.Logic
                 case '!': return new Tile(TileKind.Trigger);
                 case '~': return new Tile(TileKind.Ice);
             }
+            if (c >= '1' && c <= '9') return new Tile(TileKind.Teleporter, c);
             if (c >= 'a' && c <= 'z') return new Tile(TileKind.Button, char.ToUpperInvariant(c));
             if (c >= 'A' && c <= 'Z') return new Tile(TileKind.Door, c);
             throw new FormatException($"World {worldName}: unknown character '{c}'.");

@@ -42,6 +42,14 @@ namespace TwoWorlds.View
             new Color32(0x2E, 0xC4, 0xB6, 0xFF), // D
         };
 
+        [Tooltip("Color of each teleporter pair, by digit (1, 2, 3...).")]
+        [SerializeField] private Color[] teleporterColors =
+        {
+            new Color32(0xD9, 0x4F, 0xFF, 0xFF), // 1
+            new Color32(0x4F, 0xFF, 0xB0, 0xFF), // 2
+            new Color32(0xFF, 0x9E, 0x2C, 0xFF), // 3
+        };
+
         /// <summary>A sprite that slides toward its target cell instead of teleporting.</summary>
         private sealed class Glider
         {
@@ -113,10 +121,12 @@ namespace TwoWorlds.View
         }
 
         /// <summary>Shows a character dying on a cell. The next Refresh puts everything back.</summary>
-        public void ShowDeath(int player, Pos cell)
+        /// <param name="snap">Put the character on the cell at once instead of sliding there.</param>
+        public void ShowDeath(int player, Pos cell, bool snap = false)
         {
             players[player].Target = CellToWorld(player, cell);
             players[player].Sprite.color = death;
+            if (snap) players[player].Sprite.transform.position = players[player].Target;
         }
 
         public Vector3 CellToWorld(int world, Pos p) => origins[world] + new Vector2(p.X, p.Y);
@@ -203,6 +213,13 @@ namespace TwoWorlds.View
                     case TileKind.Ice:
                             Spawn(parent, pos, new Color(1f, 1f, 1f, 0.18f), 0.45f, 1, "Ice Shine");
                             break;
+                    // A ring with a dot in the middle; both ends of a pair share the same color.
+                    case TileKind.Teleporter:
+                        var color = TeleporterColor(tile.Letter);
+                        Spawn(parent, pos, color, 0.72f, 1, $"Teleporter {tile.Letter}");
+                        Spawn(parent, pos, floor, 0.46f, 2, "Teleporter Inside");
+                        Spawn(parent, pos, color, 0.2f, 3, "Teleporter Core");
+                        break;
                 }
             }
         }
@@ -219,6 +236,8 @@ namespace TwoWorlds.View
         }
 
         private Color LetterColor(char letter) => letterColors[(letter - 'A') % letterColors.Length];
+
+        private Color TeleporterColor(char digit) => teleporterColors[(digit - '1') % teleporterColors.Length];
 
         // Re-frame when the window (or the WebGL canvas) is resized.
         private void LateUpdate()
