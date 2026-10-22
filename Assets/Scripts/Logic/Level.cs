@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace TwoWorlds.Logic
@@ -12,14 +13,18 @@ namespace TwoWorlds.Logic
         Door,
         Turret,
         Trigger,
-        Ice
+        Ice,
+        Teleporter
     };
 
     public readonly struct Tile
     {
         public readonly TileKind Kind;
 
-        /// <summary>Uppercase door letter for Button and Door tiles ('A' for both 'a' and 'A'), '\0' otherwise.</summary>
+        /// <summary>
+        /// Uppercase door letter for Button and Door tiles ('A' for both 'a' and 'A'),
+        /// pair digit for Teleporter tiles ('1'-'9'), '\0' otherwise.
+        /// </summary>
         public readonly char Letter;
 
         /// <summary>Firing direction, only meaningful for Turret tiles.</summary>
@@ -60,6 +65,10 @@ namespace TwoWorlds.Logic
 
         private readonly Tile[,] tiles;
 
+        // Each teleporter maps to the other teleporter with the same digit.
+        private readonly Dictionary<Pos, Pos> teleporterExits = new Dictionary<Pos, Pos>();
+
+        /// <exception cref="FormatException">A teleporter digit does not appear exactly twice.</exception>
         public World(Tile[,] tiles, Pos start, bool isMirror = false)
         {
             this.tiles = tiles;
@@ -67,9 +76,30 @@ namespace TwoWorlds.Logic
             Height = tiles.GetLength(1);
             Start = start;
             IsMirror = isMirror;
+
+            var pads = new Dictionary<char, List<Pos>>();
+            for (int x = 0; x < Width; x++)
+            for (int y = 0; y < Height; y++)
+            {
+                var tile = tiles[x, y];
+                if (tile.Kind != TileKind.Teleporter) continue;
+                if (!pads.TryGetValue(tile.Letter, out var list)) pads[tile.Letter] = list = new List<Pos>();
+                list.Add(new Pos(x, y));
+            }
+
+            foreach (var pair in pads)
+            {
+                if (pair.Value.Count != 2)
+                    throw new FormatException($"teleporter '{pair.Key}' appears {pair.Value.Count} time(s), expected exactly 2.");
+                teleporterExits[pair.Value[0]] = pair.Value[1];
+                teleporterExits[pair.Value[1]] = pair.Value[0];
+            }
         }
 
         public bool InBounds(Pos p) => p.X >= 0 && p.Y >= 0 && p.X < Width && p.Y < Height;
+
+        /// <summary>Where a character entering the teleporter at p comes out. False if p has no partner.</summary>
+        public bool TryGetTeleporterExit(Pos p, out Pos exit) => teleporterExits.TryGetValue(p, out exit);
 
         public Tile this[Pos p] => tiles[p.X, p.Y];
     }

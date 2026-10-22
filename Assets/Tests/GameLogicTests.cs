@@ -9,6 +9,9 @@ namespace TwoWorlds.Tests
     {
         private const string Level1Solution = "UUURRDRRRURUUURDDD";
         private const string Level2Solution = "UUUURRRRRDDDRRRRRRRURRRUURRRDLLLDDDRRRRUURRURRDDRRRRUURRUURRRR";
+        private const string Level13Solution = "DDRRURRURRRRDDR";
+        private const string Level14Solution = "RRDDDRDDDDULUUDUULLLDRDRDDRRUURR";
+        private const string Level15Solution = "UULLDDRRLRDRRLLURRDDLDDRR";
 
         // EditMode tests run with the project root as working directory.
         private static GameLogic Load(string fileName) =>
@@ -34,6 +37,9 @@ namespace TwoWorlds.Tests
 
         [TestCase("Level1.txt", Level1Solution)]
         [TestCase("Level2.txt", Level2Solution)]
+        [TestCase("Level13.txt", Level13Solution)]
+        [TestCase("Level14.txt", Level14Solution)]
+        [TestCase("Level15.txt", Level15Solution)]
         public void ReferenceSolution_WinsOnLastMove(string file, string solution)
         {
             var game = Load(file);
@@ -277,6 +283,145 @@ namespace TwoWorlds.Tests
 
             Assert.IsFalse(game.CanUndo);
             Assert.IsFalse(game.Undo());
+        }
+
+        // ---------- Teleporters ----------
+
+        // World A: teleporters '1' at (1,0) and (3,0). World B is an empty corridor.
+        private static readonly string[] OnePair = { "S1.1G", "", "S...G" };
+
+        [Test]
+        public void Parser_ReadsTeleporterPairs()
+        {
+            var level = LevelParser.Parse(string.Join("\n", OnePair));
+            var world = level.Worlds[0];
+
+            Assert.AreEqual(TileKind.Teleporter, world[new Pos(1, 0)].Kind);
+            Assert.AreEqual('1', world[new Pos(1, 0)].Letter);
+            Assert.IsTrue(world.TryGetTeleporterExit(new Pos(1, 0), out var exit));
+            Assert.AreEqual(new Pos(3, 0), exit);
+            Assert.IsTrue(world.TryGetTeleporterExit(new Pos(3, 0), out exit));
+            Assert.AreEqual(new Pos(1, 0), exit);
+        }
+
+        [TestCase("S1..G")]
+        [TestCase("S111G")]
+        public void Parser_RejectsTeleporterWithoutExactlyOnePartner(string worldA)
+        {
+            Assert.Throws<FormatException>(() => LevelParser.Parse(worldA + "\n\nS...G"));
+        }
+
+        [Test]
+        public void EnteringTeleporter_MovesToItsPartner()
+        {
+            var game = FromLines(OnePair);
+
+            var result = game.Step(Direction.Right);
+
+            Assert.AreEqual(MoveOutcome.Moved, result.Players[0].Outcome);
+            Assert.AreEqual(new Pos(1, 0), result.Players[0].TeleportedFrom);
+            Assert.AreEqual(new Pos(3, 0), result.Players[0].To);
+            Assert.AreEqual(new Pos(3, 0), game.State.Players[0]);
+            Assert.IsNull(result.Players[1].TeleportedFrom);
+        }
+
+        [Test]
+        public void LeavingAndReenteringExit_TeleportsBack()
+        {
+            var game = FromLines(OnePair);
+            game.Step(Direction.Right); // A teleports to (3,0)
+            game.Step(Direction.Left); // A walks off the exit onto (2,0), no teleport
+            Assert.AreEqual(new Pos(2, 0), game.State.Players[0]);
+
+            var result = game.Step(Direction.Right); // A enters the (3,0) teleporter
+
+            Assert.AreEqual(new Pos(3, 0), result.Players[0].TeleportedFrom);
+            Assert.AreEqual(new Pos(1, 0), game.State.Players[0]);
+        }
+
+        [Test]
+        public void IceSlide_StopsBeforeTeleporter_ThenNextStepEntersIt()
+        {
+            // Ice at (1,0) and (2,0), teleporters '1' at (3,0) and (5,0).
+            var game = FromLines("S~~1.1G", "", "S.....G");
+            game.Step(Direction.Right); // onto the first ice tile
+            var slide = game.Step(Direction.Right); // ice to ice: slides to the last ice tile
+
+            Assert.IsNull(slide.Players[0].TeleportedFrom, "A slide does not carry onto a teleporter");
+            Assert.AreEqual(new Pos(2, 0), game.State.Players[0]);
+
+            var result = game.Step(Direction.Right);
+            Assert.AreEqual(new Pos(3, 0), result.Players[0].TeleportedFrom);
+            Assert.AreEqual(new Pos(5, 0), game.State.Players[0]);
+        }
+
+        [Test]
+        public void MirrorCharacter_EntersTeleporterInMirroredDirection()
+        {
+            // Mirror start at (4,0): pressing Right moves it left, onto the teleporter at (3,0).
+            var game = FromLines("G1.1M", "", "S...G");
+
+            var result = game.Step(Direction.Right);
+
+            Assert.AreEqual(new Pos(3, 0), result.Players[0].TeleportedFrom);
+            Assert.AreEqual(new Pos(1, 0), game.State.Players[0]);
+        }
+
+        [Test]
+        public void Undo_RevertsATeleport()
+        {
+            var game = FromLines(OnePair);
+            game.Step(Direction.Right);
+
+            Assert.IsTrue(game.Undo());
+            Assert.AreEqual(game.Level.Worlds[0].Start, game.State.Players[0]);
+        }
+
+        // Turret at (0,1) fires right across teleporter '1' at (1,1); trigger at (1,0) right below it.
+        private static readonly string[] TurretOverTeleporter = { ">1.1G", "S!...", "", ".....", "S...G" };
+
+        [Test]
+        public void Projectile_CrossesTeleporterWithoutTeleporting()
+        {
+            var game = FromLines(TurretOverTeleporter);
+            game.Step(Direction.Right); // A enters the trigger
+
+            game.Tick();
+            Assert.AreEqual(new Pos(1, 1), game.State.Projectiles[0].Pos);
+            game.Tick();
+            Assert.AreEqual(new Pos(2, 1), game.State.Projectiles[0].Pos);
+        }
+
+        [Test]
+        public void WalkingIntoAProjectileOnTeleporter_ResetsTheLevel()
+        {
+            var game = FromLines(TurretOverTeleporter);
+            game.Step(Direction.Right); // A enters the trigger
+            game.Tick(); // the projectile is now on the teleporter above A
+
+            var result = game.Step(Direction.Up);
+
+            Assert.IsTrue(result.Died);
+            Assert.AreEqual(DeathCause.Projectile, result.DeathCause);
+            Assert.AreEqual(new Pos(1, 1), result.Players[0].To, "Dies on the teleporter it entered");
+            AssertResetToStart(game);
+        }
+
+        [Test]
+        public void TeleportingOntoAProjectile_ResetsTheLevel()
+        {
+            // Teleporters '1' at (2,0) and (2,1); turret at (1,1) fires right onto the exit (2,1).
+            var game = FromLines("G>1..", "S!1..", "", ".....", "S...G");
+            game.Step(Direction.Right); // A enters the trigger
+            game.Tick(); // the projectile is now on the exit teleporter
+
+            var result = game.Step(Direction.Right); // A enters (2,0) and comes out on the projectile
+
+            Assert.IsTrue(result.Died);
+            Assert.AreEqual(DeathCause.Projectile, result.DeathCause);
+            Assert.AreEqual(new Pos(2, 0), result.Players[0].TeleportedFrom);
+            Assert.AreEqual(new Pos(2, 1), result.Players[0].To, "Dies on the exit");
+            AssertResetToStart(game);
         }
     }
 }
