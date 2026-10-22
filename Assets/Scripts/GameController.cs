@@ -20,6 +20,9 @@ namespace TwoWorlds
         [Tooltip("Seconds a death stays on screen before the level resets.")]
         [SerializeField] private float deathPause = 0.5f;
 
+        [Tooltip("Opened with Escape.")]
+        [SerializeField] private PauseMenu pauseMenu;
+
         private GridView view;
         private GameLogic game;
         private int levelIndex;
@@ -67,6 +70,13 @@ namespace TwoWorlds
         {
             if (game == null) return; // returning to the menu
 
+            var kb = Keyboard.current;
+            if (pauseMenu != null)
+            {
+                if (kb != null && kb.escapeKey.wasPressedThisFrame) pauseMenu.Toggle();
+                if (pauseMenu.IsPaused) return;
+            }
+
             // During the death pause nothing moves; the reset is shown when it ends.
             if (deathTimer > 0f)
             {
@@ -75,7 +85,6 @@ namespace TwoWorlds
                 return;
             }
 
-            var kb = Keyboard.current;
             if (kb == null) return;
 
             // Last level can load the main menu instead of simply ending the game
@@ -93,8 +102,7 @@ namespace TwoWorlds
 
             if (kb.rKey.wasPressedThisFrame)
             {
-                game.Restart();
-                view.Refresh(game, snap: true);
+                RestartLevel();
             }
             else if (kb.backspaceKey.wasPressedThisFrame)
             {
@@ -139,6 +147,15 @@ namespace TwoWorlds
                 return;
             }
             view.Refresh(game);
+        }
+
+        /// <summary>Manual restart (R key or pause menu): not counted as a death.</summary>
+        public void RestartLevel()
+        {
+            game.Restart();
+            deathTimer = 0f;
+            tickTimer = 0f;
+            view.Refresh(game, snap: true);
         }
 
         private void StartDeathPause()
@@ -190,7 +207,10 @@ namespace TwoWorlds
             textStyle.alignment = TextAnchor.UpperLeft;
             string undo = game.Level.HasTurrets ? "" : "     Undo: Backspace";
             GUI.Label(new Rect(16, Screen.height - size * 2, Screen.width, size * 2),
-                $"Move: Arrows / WASD / ZQSD{undo}     Restart: R", textStyle);
+                $"Move: Arrows / WASD / ZQSD{undo}     Restart: R     Pause: Esc", textStyle);
+
+            // The pause panel is drawn by its Canvas; hide the end-of-level box behind it.
+            if (pauseMenu != null && pauseMenu.IsPaused) return;
 
             if (!game.IsWon) return;
             var box = new Rect(Screen.width * 0.25f, Screen.height * 0.35f, Screen.width * 0.5f, Screen.height * 0.3f);

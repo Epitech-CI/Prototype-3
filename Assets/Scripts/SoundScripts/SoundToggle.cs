@@ -1,5 +1,6 @@
 using UnityEngine;
 using TMPro;
+using UnityEngine.UI;
 
 public class SoundToggle : MonoBehaviour
 {
@@ -31,6 +32,7 @@ public class SoundToggle : MonoBehaviour
     // Toggle Music on or off depending on the current state
     public void ToggleMusic()
     {
+        if (MusicManager.Instance == null) return;
         AudioSource musicSource = MusicManager.Instance.GetComponent<AudioSource>();
         musicSource.mute = !musicSource.mute;
 
@@ -50,6 +52,15 @@ public class SoundToggle : MonoBehaviour
             : "Sound Effects: OFF";
 
         // Music Button
+        // MusicManager lives in the Menu scene: it is missing when the Game scene is played directly.
+        if (MusicManager.Instance == null)
+        {
+            musicButtonText.text = "Music: N/A";
+            var musicButton = musicButtonText.GetComponentInParent<Button>();
+            if (musicButton != null) musicButton.interactable = false;
+            return;
+        }
+
         musicButtonText.text = MusicManager.Instance.IsMusicMuted
             ? "Music: OFF"
             : "Music: ON";
